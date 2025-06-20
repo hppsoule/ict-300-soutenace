@@ -22,37 +22,53 @@ import pool, { testConnection } from './config/database.js';
 
 dotenv.config();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://ict-300-soutenace-y4rd.vercel.app'
+
+];
+
 const app = express();
 const server = createServer(app);
+
+// ✅ Socket.IO avec origine autorisée
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
 const PORT = process.env.PORT || 5000;
 
-// Rate limiting - MODIFIÉ: augmentation de la limite et du temps
+// ✅ Sécurité & limites
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // augmenté de 100 à 500 requêtes par fenêtre
+  max: 500,
   message: { error: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.' },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
-// Middleware
 app.use(helmet());
+
+// ✅ CORS dynamique selon origine autorisée
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Assurez-vous que cette valeur correspond exactement à l'origine de votre frontend
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS: ' + origin));
+    }
+  },
   credentials: true
 }));
+
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Make io available in routes
+// Injecter Socket.IO dans les requêtes
 app.use((req, res, next) => {
   req.io = io;
   next();
