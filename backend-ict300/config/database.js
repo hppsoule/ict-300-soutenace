@@ -26,11 +26,15 @@ const poolConfig = {
   port: parseInt(process.env.DB_PORT, 10),
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
-  password: String(process.env.DB_PASSWORD), // S'assurer que c'est une string
-  max: 20, // Nombre maximum de connexions
+  password: String(process.env.DB_PASSWORD),
+  ssl: {
+    rejectUnauthorized: false // ✅ OBLIGATOIRE pour Neon
+  },
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 };
+
 
 console.log('🔧 Configuration de la base de données:');
 console.log(`   Host: ${poolConfig.host}`);
